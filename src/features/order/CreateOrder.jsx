@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Form, redirect } from "react-router-dom";
+import { Form, redirect, useActionData, useNavigation } from "react-router-dom";
 import { createOrder } from "../../services/apiRestaurant";
 
 // https://uibakery.io/regex-library/phone-number
@@ -35,6 +35,9 @@ const fakeCart = [
 function CreateOrder() {
   // const [withPriority, setWithPriority] = useState(false);
   const cart = fakeCart;
+  const formErrors = useActionData();
+  const navigation = useNavigation();
+  const isSubmiting = navigation.state === "submitting";
 
   return (
     <div>
@@ -43,20 +46,23 @@ function CreateOrder() {
       <Form method="POST">
         <div>
           <label>First Name</label>
-          <input type="text" name="customer" required />
+          <input type="text" name="customer" disabled={isSubmiting} required />
         </div>
 
         <div>
           <label>Phone number</label>
           <div>
-            <input type="tel" name="phone" required />
+            <input type="tel" name="phone" disabled={isSubmiting} required />
+            {formErrors?.phone && (
+              <p className="text-red-100">{formErrors.phone}</p>
+            )}
           </div>
         </div>
 
         <div>
           <label>Address</label>
           <div>
-            <input type="text" name="address" required />
+            <input type="text" name="address" disabled={isSubmiting} required />
           </div>
         </div>
 
@@ -70,9 +76,9 @@ function CreateOrder() {
           />
           <label htmlFor="priority">Want to yo give your order priority?</label>
         </div>
-        <input name="cart" type="hidden" value={JSON.stringify(fakeCart)} />
+        <input name="cart" type="hidden" value={JSON.stringify(cart)} />
         <div>
-          <button>Order now</button>
+          <button>{isSubmiting ? "processing..." : "Order now"}</button>
         </div>
       </Form>
     </div>
@@ -87,6 +93,11 @@ export async function action({ request }) {
     cart: JSON.parse(data.cart),
     priority: data.priority === "on",
   };
+  const errors = {};
+  if (!isValidPhone(order.phone))
+    errors.phone = "pls insert the correct number";
+  if (Object.keys(errors).length > 0) return errors;
+  //if everything is ok------------------------
   const newOrder = await createOrder(order);
   return redirect(`/order/${newOrder.id}`);
 }
